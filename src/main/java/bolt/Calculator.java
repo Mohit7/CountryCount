@@ -1,68 +1,64 @@
 package bolt;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.util.Map;
 
+import java.util.Map;
+import java.util.HashMap;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
-import com.mongodb.DBAddress;
-import com.mongodb.Mongo;
-import com.mongodb.MongoException;
-import com.mongodb.WriteConcern;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
-import com.mongodb.DBCursor;
-import com.mongodb.ServerAddress;
-import com.mongodb.util.JSON;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
-import org.json.simple.parser.JSONParser;
 
-public class Calculator extends BaseRichBolt 
-{
-    OutputCollector _collector;
 
+
+public class Calculator extends BaseRichBolt {
+
+	OutputCollector _collector;
+    JSONArray dispArray;
+    JSONObject temp;
+    HashMap<Object, HashMap<Object,Integer>> counter; 
+    HashMap<Object, Integer> h;
+    
+    
     @Override
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) 
     {
-      _collector = collector;
+    		_collector = collector;
+    		JSONArray dispArray = new JSONArray();
+    		JSONObject temp = new JSONObject();
+    		counter = new HashMap<Object,HashMap<Object,Integer>>();   
     }
 
     @Override
     public void execute(Tuple tuple) 
     {
-    	
-    	try
-        {
-              Mongo mc = new Mongo("localhost",27017);
-              DB db = mc.getDB("trending");
-              DBCollection coll = db.getCollection("result");
-              Object jsonObj = tuple.getValue(0); 
-              Object o = com.mongodb.util.JSON.parse(jsonObj.toString());
-              DBObject dbObj = (DBObject) o;
-    		  coll.insert(dbObj);
-        }
-
-    	catch(Exception e)
-        {
-      		System.out.println("UnknownHostException: "+e);	
-        }
-
-    }
+    	      JSONObject jsonObj = (JSONObject) tuple.getValue(0);
+              
+              try
+              {
+            	  h = counter.get(jsonObj.get("topic"));
+            	  Integer i = h.get(jsonObj.get("country"));
+                  i++;
+                  
+                  h.put(jsonObj.get("country"),i);
+                  counter.put(jsonObj.get("topic"), h);
+                  	  
+              }
+              catch(Exception e)
+              {
+            	  h = new HashMap<Object,Integer>();
+            	  h.put(jsonObj.get("country"),1);
+            	  counter.put(jsonObj.get("topic"), h);
+              }
+                  }
 
     @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer) 
-    {
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
       declarer.declare(new Fields("extract"));
     }
 
 
-}
+  }

@@ -9,21 +9,12 @@ import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
-import com.mongodb.DBAddress;
-import com.mongodb.Mongo;
-import com.mongodb.MongoException;
-import com.mongodb.WriteConcern;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
-import com.mongodb.DBCursor;
-import com.mongodb.ServerAddress;
-import com.mongodb.util.JSON;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
 
 public class Extractor extends BaseRichBolt 
 {
@@ -48,37 +39,50 @@ public class Extractor extends BaseRichBolt
               topic = obj.get("topic").toString();
               
               
-              obj = (DBObject)obj.get("raw");
-               
+              obj = (DBObject)obj.get("raw"); 
               obj = (DBObject)obj.get("statuses");
               
               JSONArray array = null;
-				array = (JSONArray) parser.parse(obj.toString());
+			  array = (JSONArray) parser.parse(obj.toString());
 			  JSONObject emitobj = new JSONObject();
               emitobj.put("topic", topic);
               
               
               
               String tz = new String();
-              for(int i=0 ; i < array.size();i++)
+              try
               {
-              	JSONObject jobj =(JSONObject) array.get(i);
-              	emitobj.put("tweet",jobj.get("text"));
-              	
-              	//timezone logic
-              	tz = ((JSONObject)jobj.get("user")).get("time_zone").toString();
-              	if(tz == "None")
-              		tz = ((JSONObject)jobj.get("user")).get("location").toString();
-              	if(tz == "None")
-              		tz = jobj.get("place").toString();
-              	if(tz == "None")
-              		tz = "unknown";
+              
+	              for(int i=0 ; i < array.size();i++)
+	              {
+	              	JSONObject jobj =(JSONObject) array.get(i);
+	              	emitobj.put("tweet",jobj.get("text"));
+	              	
+	              	//timezone logic
+	              	tz = ((JSONObject)jobj.get("user")).get("time_zone").toString();
+	              	if(tz == "None")
+	              		tz = ((JSONObject)jobj.get("user")).get("location").toString();
+	              	if(tz == "None")
+	              		tz = jobj.get("place").toString();
+	              	if(tz == "None")
+	              		tz = "unknown";
+	              		
+	              }
+	          }
+              catch(Exception e)
+              {
+            	  tz = "unknown";
+              }
+              
+              
+              
+             
                   	
               	
-              	emitobj.put("country",tz);
+              emitobj.put("country",tz);
               	
-              	_collector.emit(new Values(emitobj));
-              }
+              _collector.emit(new Values(emitobj));
+              
               
         }
     	catch(Exception e)
